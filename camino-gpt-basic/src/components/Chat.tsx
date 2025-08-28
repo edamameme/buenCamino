@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { PREFERENCES_STORAGE_KEY } from "@/lib/preferences";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -27,7 +28,7 @@ export default function Chat() {
         try {
             let preferences: any = undefined;
             try {
-                const raw = localStorage.getItem("camino.preferences.v1");
+                const raw = localStorage.getItem(PREFERENCES_STORAGE_KEY);
                 if (raw) preferences = JSON.parse(raw);
             } catch { }
 
@@ -36,7 +37,11 @@ export default function Chat() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ messages: next, preferences }),
             });
+            console.log("Sending payload:", { messages: next, preferences });
+
             const data = await res.json();
+            console.log("[/api/chat] incoming:", data);
+
             setMessages((m) => [...m, { role: "assistant", content: data.reply || "(no reply)" }]);
         } catch {
             setMessages((m) => [
