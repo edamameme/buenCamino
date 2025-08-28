@@ -1,3 +1,7 @@
+/* app/globals.css */
+@import "tailwindcss";
+
+/* your styles after */
 * { box-sizing: border-box; }
 html, body, #__next { height: 100%; }
 :root { color-scheme: dark; }
