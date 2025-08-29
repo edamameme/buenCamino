@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PREFERENCES_STORAGE_KEY } from "@/lib/preferences";
+import { AgentAction, emitAction } from "@/lib/agentActions";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -43,6 +44,9 @@ export default function Chat() {
             console.log("[/api/chat] incoming:", data);
 
             setMessages((m) => [...m, { role: "assistant", content: data.reply || "(no reply)" }]);
+            if (Array.isArray(data.actions)) {
+                for (const a of data.actions as AgentAction[]) emitAction(a);
+            }
         } catch {
             setMessages((m) => [
                 ...m,
@@ -71,7 +75,7 @@ export default function Chat() {
 
     // --- Takeover: full-screen on mobile; right drawer on desktop
     return (
-       <div className="fixed inset-0 z-[11000]">
+        <div className="fixed inset-0 z-[11000]">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
 
             <div className="absolute inset-0 md:inset-y-0 md:right-0 md:inset-x-auto md:w-[min(640px,100vw)] bg-[#0f0f0f] border-l border-neutral-800 shadow-2xl flex flex-col">

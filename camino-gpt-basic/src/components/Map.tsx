@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-// import "leaflet/dist/leaflet.css"; // ✅ critical
+import { AgentAction } from "@/lib/agentActions";
 
 // Provide Leaflet's marker icon URLs as plain strings (not StaticImageData).
 // Using import.meta.url ensures a correct URL in Next.js bundling.
@@ -42,7 +42,7 @@ export default function Map() {
     // Example marker
     L.marker([42.8806, -8.5449]).addTo(map).bindPopup("Santiago de Compostela");
 
-      // ✅ Ensure Leaflet measures after paint to avoid “black until resize”
+    // ✅ Ensure Leaflet measures after paint to avoid “black until resize”
     const invalidate = () => map.invalidateSize();
     const t = setTimeout(invalidate, 0);
     window.addEventListener("resize", invalidate);
@@ -56,6 +56,83 @@ export default function Map() {
     };
   }, []);
 
+  // 👇 NEW: listen for agent actions and draw/clear/focus on the map
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    let routeLayer: L.GeoJSON | null = null;
+    let markersGroup: L.LayerGroup | null = null; // 👈 add this next to routeLayer
+
+    function handleAction(ev: Event) {
+      const detail = (ev as CustomEvent<AgentAction>).detail
+
+      if (!detail || typeof detail !== "object" || !("type" in detail)) return;
+      if (!map) return null;
+
+      if (detail.type === "clearRoute") {
+        if (routeLayer) {
+          map.removeLayer(routeLayer);
+          routeLayer = null;
+        }
+        if (markersGroup) { map.removeLayer(markersGroup); markersGroup = null; } // 👈 clear pins too
+
+        return;
+      }
+
+      if (detail.type === "focus") {
+        map.setView([detail.lat, detail.lon], detail.zoom ?? Math.max(map.getZoom(), 12));
+        return;
+      }
+
+      if (detail.type === "drawRoute") {
+        // replace existing route
+        if (routeLayer) {
+          map.removeLayer(routeLayer);
+          routeLayer = null;
+        }
+
+        routeLayer = L.geoJSON(detail.geojson as any, {
+          style: () => ({
+            weight: 5,
+            opacity: 0.9,
+          }),
+        }).addTo(map);
+
+        // fit the map to the route
+        try {
+          const bounds = routeLayer.getBounds();
+          if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24] });
+        } catch { }
+      }
+      if (detail.type === "drawMarkers") {
+        if (markersGroup) { map.removeLayer(markersGroup); markersGroup = null; }
+        markersGroup = L.layerGroup().addTo(map);
+
+        detail.markers.forEach((m, idx) => {
+          L.marker([m.lat, m.lon])
+            .addTo(markersGroup!)
+            .bindPopup(
+              `<div style="font-weight:600">Day ${idx + 1}${m.title ? ` — ${m.title}` : ""}</div>` +
+              (m.subtitle ? `<div style="opacity:.8">${m.subtitle}</div>` : "")
+            );
+        });
+        }
+      }
+  
+      window.addEventListener("camino:action", handleAction as EventListener);
+      return () => {
+        window.removeEventListener("camino:action", handleAction as EventListener);
+        if (routeLayer) {
+          map.removeLayer(routeLayer);
+          routeLayer = null;
+        }
+        if (markersGroup) {
+          map.removeLayer(markersGroup);
+          markersGroup = null;
+        }
+      };
+    }, []);
 
   return (
     <div
