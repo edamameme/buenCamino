@@ -61,22 +61,19 @@ export default function Map() {
     const map = mapRef.current;
     if (!map) return;
 
-    let routeLayer: L.GeoJSON | null = null;
-    let markersGroup: L.LayerGroup | null = null; // 👈 add this next to routeLayer
+    // inside the second useEffect in Map.tsx, replace the local vars + handlers
+
+    let routesGroup: L.LayerGroup | null = null;
+    let markersGroup: L.LayerGroup | null = null;
 
     function handleAction(ev: Event) {
-      const detail = (ev as CustomEvent<AgentAction>).detail
-
+      const detail = (ev as CustomEvent<AgentAction>).detail;
       if (!detail || typeof detail !== "object" || !("type" in detail)) return;
-      if (!map) return null;
+      if (!map) return;
 
       if (detail.type === "clearRoute") {
-        if (routeLayer) {
-          map.removeLayer(routeLayer);
-          routeLayer = null;
-        }
-        if (markersGroup) { map.removeLayer(markersGroup); markersGroup = null; } // 👈 clear pins too
-
+        if (routesGroup) { map.removeLayer(routesGroup); routesGroup = null; }
+        if (markersGroup) { map.removeLayer(markersGroup); markersGroup = null; }
         return;
       }
 
@@ -86,26 +83,21 @@ export default function Map() {
       }
 
       if (detail.type === "drawRoute") {
-        // replace existing route
-        if (routeLayer) {
-          map.removeLayer(routeLayer);
-          routeLayer = null;
-        }
+        if (!routesGroup) routesGroup = L.layerGroup().addTo(map);
+        const layer = L.geoJSON(detail.geojson as any, {
+          style: () => ({ weight: 5, opacity: 0.9 }),
+        }).addTo(routesGroup);
 
-        routeLayer = L.geoJSON(detail.geojson as any, {
-          style: () => ({
-            weight: 5,
-            opacity: 0.9,
-          }),
-        }).addTo(map);
-
-        // fit the map to the route
         try {
-          const bounds = routeLayer.getBounds();
+          const bounds = layer.getBounds();
           if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24] });
         } catch { }
+        return;
       }
+
       if (detail.type === "drawMarkers") {
+        console.log("Drawing markers:", detail.markers);
+
         if (markersGroup) { map.removeLayer(markersGroup); markersGroup = null; }
         markersGroup = L.layerGroup().addTo(map);
 
@@ -117,22 +109,18 @@ export default function Map() {
               (m.subtitle ? `<div style="opacity:.8">${m.subtitle}</div>` : "")
             );
         });
-        }
+        return;
       }
-  
-      window.addEventListener("camino:action", handleAction as EventListener);
-      return () => {
-        window.removeEventListener("camino:action", handleAction as EventListener);
-        if (routeLayer) {
-          map.removeLayer(routeLayer);
-          routeLayer = null;
-        }
-        if (markersGroup) {
-          map.removeLayer(markersGroup);
-          markersGroup = null;
-        }
-      };
-    }, []);
+    }
+
+    window.addEventListener("camino:action", handleAction as EventListener);
+    return () => {
+      window.removeEventListener("camino:action", handleAction as EventListener);
+      if (routesGroup) { map.removeLayer(routesGroup); routesGroup = null; }
+      if (markersGroup) { map.removeLayer(markersGroup); markersGroup = null; }
+    };
+
+  }, []);
 
   return (
     <div

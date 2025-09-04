@@ -15,7 +15,8 @@
     "openai": "^5.16.0",
     "openapi": "^1.0.1",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
