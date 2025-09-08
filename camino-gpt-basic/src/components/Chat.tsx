@@ -6,7 +6,8 @@ import { PREFERENCES_STORAGE_KEY } from "@/lib/preferences";
 import { AgentAction, emitAction } from "@/lib/agentActions";
 import { postJsonWithRetry } from "@/lib/net";
 import type { Plan } from "@/lib/schemas";          // executor plan (your existing type)
-import type { Itinerary, Leg } from "@/lib/itinerary"; // NEW: itinerary for UI
+import type { Itinerary, Leg } from "@/lib/leg"; // NEW: itinerary for UI
+import { formatDistanceWithUnit } from "@/lib/utils";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -194,18 +195,24 @@ export default function Chat() {
                         Day {leg.day} — {leg.from} → {leg.to}
                       </div>
                       <div className="opacity-80 text-xs">
-                        {leg.km ? `${leg.km} km` : "Distance n/a"}
+                        {formatDistanceWithUnit(leg.km)}
                         {leg.ascentM ? ` · +${leg.ascentM} m` : ""}
                       </div>
-                      {leg.notes?.length ? (
-                        <ul className="mt-1 text-xs opacity-80 list-disc pl-4">
-                          {leg.notes.map((n, i) => <li key={i}>{n}</li>)}
-                        </ul>
+                      {leg.notes ? (
+                        <div className="mt-1 text-xs opacity-80">
+                          {Array.isArray(leg.notes) ? (
+                            <ul className="list-disc pl-4">
+                              {leg.notes.map((n, i) => <li key={i}>{n}</li>)}
+                            </ul>
+                          ) : (
+                            <p>{leg.notes}</p>
+                          )}
+                        </div>
                       ) : null}
                     </div>
                     <button
                       className="shrink-0 rounded-md px-2 py-1 text-xs border border-neutral-700 hover:bg-neutral-800"
-                      onClick={() => emitAction({ type: "focus", lat: leg.lat, lon: leg.lon, zoom: 13 } as AgentAction)}
+                      onClick={() => emitAction({ type: "focus", lat: leg.toLat, lon: leg.toLon, zoom: 13 } as AgentAction)}
                       title="Center map on this day"
                     >
                       Focus

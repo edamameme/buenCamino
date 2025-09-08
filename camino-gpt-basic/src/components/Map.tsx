@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import { AgentAction } from "@/lib/agentActions";
+import { formatDistanceWithUnit } from "@/lib/utils";
 
 // Provide Leaflet's marker icon URLs as plain strings (not StaticImageData).
 // Using import.meta.url ensures a correct URL in Next.js bundling.
@@ -85,7 +86,27 @@ export default function Map() {
       if (detail.type === "drawRoute") {
         if (!routesGroup) routesGroup = L.layerGroup().addTo(map);
         const layer = L.geoJSON(detail.geojson as any, {
-          style: () => ({ weight: 5, opacity: 0.9 }),
+          style: (feature) => {
+            // Style each stage line with different colors or properties
+            const day = feature?.properties?.day;
+            const colors = ['#3388ff', '#ff3388', '#33ff88', '#ff8833', '#8833ff', '#33ffff'];
+            const color = day ? colors[(day - 1) % colors.length] : '#3388ff';
+            
+            return { 
+              weight: 4, 
+              opacity: 0.8,
+              color: color 
+            };
+          },
+          onEachFeature: (feature, layer) => {
+            // Add popup with stage info
+            if (feature.properties) {
+              const { day, from, to, distance } = feature.properties;
+              const popup = `<strong>Day ${day}</strong><br>${from} → ${to}` + 
+                           (formatDistanceWithUnit(distance) ? `<br>${formatDistanceWithUnit(distance)}` : '');
+              layer.bindPopup(popup);
+            }
+          }
         }).addTo(routesGroup);
 
         try {
@@ -105,7 +126,7 @@ export default function Map() {
           L.marker([m.lat, m.lon])
             .addTo(markersGroup!)
             .bindPopup(
-              `<div style="font-weight:600">Day ${idx + 1}${m.title ? ` — ${m.title}` : ""}</div>` +
+              `<div style="font-weight:600">${m.title}</div>` +
               (m.subtitle ? `<div style="opacity:.8">${m.subtitle}</div>` : "")
             );
         });

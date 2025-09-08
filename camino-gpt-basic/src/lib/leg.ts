@@ -4,10 +4,12 @@ export type Leg = {
   from: string;         // e.g., "Sarria"
   to: string;           // e.g., "Portomarín"
   km?: number;
+  toLat: number;        // destination coordinates (end-of-day town center)
+  toLon: number;
+  fromLat?: number;     // starting coordinates (only needed for first leg)
+  fromLon?: number;
   ascentM?: number;
-  notes?: string[];
-  lat: number;          // end-of-day (overnight) town center
-  lon: number;
+  notes?: string;
 };
 
 export type Itinerary = Leg[];

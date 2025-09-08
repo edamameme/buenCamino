@@ -12,7 +12,7 @@ export const FocusInput = z.object({
 
 export const DrawRouteInput = z.object({
     // Accept LineString or Feature<LineString>; passthrough props (coords, etc.)
-    geojson: z.object({ type: z.enum(["LineString", "Feature"]) }).passthrough(),
+    geojson: z.object({ type: z.enum(["LineString", "Feature", "FeatureCollection"]) }).passthrough(),
     meta: z.object({
         startName: z.string().optional(),
         endName: z.string().optional(),
@@ -87,10 +87,8 @@ export const PlanStep = z.object({
 export const PlanSchema = z.object({
     steps: z.array(PlanStep).min(1).max(50),
     specialist: z.enum(["navigator", "concierge", "safety", "logistics"]).optional(),
-    budget: z.object({
-        maxSteps: z.number().int().min(1).max(50).optional(),
-        maxTokens: z.number().int().min(100).max(200000).optional(),
-    }).optional(),
+    budget: z.enum(["$", "$$", "$$$"]).optional(),
+
 });
 
 export type Plan = z.infer<typeof PlanSchema>;
